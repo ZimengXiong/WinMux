@@ -338,6 +338,16 @@ final class TreeNodeTest: XCTestCase {
         XCTAssertNil(Workspace.existing(byName: "Ghost Name"))
     }
 
+    func testReconcileWorkspaceStateKeepsLabelOfNotYetCreatedPersistentWorkspace() {
+        config.persistentWorkspaces = ["5"]
+        config.workspaceSidebar.workspaceLabels["5"] = "Create"
+
+        Workspace.reconcileWorkspaceState()
+
+        XCTAssertEqual(config.workspaceSidebar.workspaceLabels["5"], "Create")
+        XCTAssertEqual(workspaceDisplayName("5"), "Create")
+    }
+
     func testWorkspaceDisplayNameUsesSidebarDraftFallback() {
         XCTAssertEqual(workspaceDisplayName("__sidebar_draft_workspace_4"), "Workspace 4")
     }
