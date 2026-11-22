@@ -191,6 +191,11 @@ struct WorkspaceSidebarView: View {
 
     func beginSidebarSearchIfNeeded(panel: WorkspaceSidebarPanel? = nil) {
         guard renamingProjectId == nil, renamingWorkspaceName == nil, !isSearchEditing else { return }
+        // Type-to-search on hover expansion ends when the sidebar collapses. A sidebar kept
+        // expanded never collapses, so auto-starting here installed the session-wide key tap (and
+        // activated WinMux) permanently: every keystroke went to the search (GitHub #18, #35).
+        // The open-sidebar command still starts search explicitly.
+        guard !config.workspaceSidebar.alwaysExpanded else { return }
         guard snapshot.visibleWidth > snapshot.configuration.collapsedWidth + 0.5 || isSidebarExpanding else { return }
         let editingPanel = panel ?? currentPanel() ?? WorkspaceSidebarPanel.shared
         adoptCommandSidebarSearchIfNeeded(panel: editingPanel)
