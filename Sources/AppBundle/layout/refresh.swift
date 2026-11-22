@@ -71,9 +71,12 @@ func scheduleRefreshSession(
     _ event: RefreshSessionEvent,
     optimisticallyPreLayoutWorkspaces: Bool = false,
 ) {
-    if shouldDropScheduledRefresh(event, activeEvent: activeScheduledRefreshEvent) ||
-        shouldDropScheduledRefresh(event, activeEvent: pendingRefreshRequest?.event)
-    {
+    // Only a *pending* geometry/reset session makes a new geometry event redundant: it hasn't
+    // started yet, so it will observe this move. The *active* one may already be past its layout
+    // pass, and dropping against it lost the last kAXMoved/kAXResized of an app that resizes its
+    // own tiled window (session restore, Electron) right after we laid it out, leaving the window
+    // off-layout until some unrelated event. Such events coalesce into the pending follow-up.
+    if shouldDropScheduledRefresh(event, activeEvent: pendingRefreshRequest?.event) {
         debugFocusLog("scheduleRefreshSession dropped event=\(event) active=\(activeScheduledRefreshEvent?.description ?? "nil") pending=\(pendingRefreshRequest?.event.description ?? "nil")")
         return
     }
