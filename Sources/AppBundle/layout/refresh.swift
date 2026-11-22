@@ -135,7 +135,6 @@ func runRefreshSessionBlocking(
                 let nativeFocused = try await getNativeFocusedWindow()
                 try checkCancellation()
                 if let nativeFocused { try await debugWindowsIfRecording(nativeFocused) }
-                await updateNativeFullscreenChromeSuppression(nativeFocused: nativeFocused)
                 updateFocusCache(nativeFocused)
                 try checkCancellation()
 
@@ -162,6 +161,10 @@ func runRefreshSessionBlocking(
                     try checkCancellation()
                     refreshModel()
                 }
+                // Must run after normalizeLayoutReason(): that is what moves a window that just
+                // went fullscreen into the workspace's fullscreen container, which is where the
+                // suppression reads it from.
+                updateNativeFullscreenChromeSuppression()
                 updateTrayText()
                 await updateWorkspaceSidebarModel()
                 SecureInputPanel.shared.refresh()
@@ -226,7 +229,6 @@ func runLightSession<T>(
                 let nativeFocused = try await getNativeFocusedWindow()
                 try checkCancellation()
                 if let nativeFocused { try await debugWindowsIfRecording(nativeFocused) }
-                await updateNativeFullscreenChromeSuppression(nativeFocused: nativeFocused)
                 updateFocusCache(nativeFocused)
                 try checkCancellation()
                 let focusBefore = focus.windowOrNil
@@ -238,6 +240,7 @@ func runLightSession<T>(
 
                 let focusAfter = focus.windowOrNil
 
+                updateNativeFullscreenChromeSuppression()
                 updateTrayText()
                 await updateWorkspaceSidebarModel()
                 SecureInputPanel.shared.refresh()
