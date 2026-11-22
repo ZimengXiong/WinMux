@@ -1,0 +1,82 @@
+name: Build preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['release/*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-preview:
+    name: Test and build signed preview
+    runs-on: macos-26
+    timeout-minutes: 60
+    environment: release
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install the pinned Swift toolchain
+        run: |
+          brew install swiftly
+          swiftly init --skip-install --assume-yes --verbose
+          swiftly install
+
+      - name: Build and test
+        run: make check
+
+      - name: Import the Apple Development certificate
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          certificate_path="$RUNNER_TEMP/developer-id.p12"
+          keychain_path="$RUNNER_TEMP/release-signing.keychain-db"
+          keychain_password="$(uuidgen)"
+
+          printf '%s' "$CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$certificate_path" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain_path"
+          security list-keychains -d user -s "$keychain_path"
+          echo "RELEASE_KEYCHAIN=$keychain_path" >> "$GITHUB_ENV"
+
+      - name: Build and sign preview archive
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#release/}"
+          if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            version="$(tr -d '[:space:]' < VERSION)"
+          fi
+          make release VERSION="$version" RELEASE_TAG="v$version"
+          cp ".release/WinMux-$version.zip" .release/WinMux-preview.zip
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: winmux-preview
+          path: .release/WinMux-preview.zip
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Remove signing credentials
+        if: always()
+        run: |
+          if [[ -n "${RELEASE_KEYCHAIN:-}" ]]; then
+            security delete-keychain "$RELEASE_KEYCHAIN"
+          fi
