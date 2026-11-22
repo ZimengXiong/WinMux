@@ -58,8 +58,9 @@ private func mergeRefreshEvents(_ old: RefreshSessionEvent, _ new: RefreshSessio
     func score(_ e: RefreshSessionEvent) -> Int {
         // Reassertion outranks the rest: wake-from-sleep is the only event that re-parks drifted
         // hidden windows, and it ties with (so used to be replaced by) the activeSpaceDidChange
-        // and leftMouseUp events that routinely arrive right after a wake.
-        (e.requiresHiddenWindowsReassertion ? 4 : 0) +
+        // and leftMouseUp events that routinely arrive right after a wake. Exclude .startup so
+        // later events aren't downgraded into startup placement/callback semantics.
+        (!e.isStartup && e.requiresHiddenWindowsReassertion ? 4 : 0) +
             (e.requiresWindowRefreshBarrier ? 2 : 0) +
             (e.canReuseLastAppliedWindowFrames ? 0 : 1)
     }
@@ -212,7 +213,7 @@ func runLightSession<T>(
     // macOS moved them with no AX events delivered, so nothing later will ask for it again.
     // Without this, a hotkey or CLI command issued right after a wake cancels the wake session
     // mid-flight and the windows stay drifted until the next sleep cycle.
-    if let cancelledEvent = activeScheduledRefreshEvent, cancelledEvent.requiresHiddenWindowsReassertion {
+    if let cancelledEvent = activeScheduledRefreshEvent, !cancelledEvent.isStartup, cancelledEvent.requiresHiddenWindowsReassertion {
         pendingRefreshRequest = pendingRefreshRequest.map {
             (mergeRefreshEvents($0.event, cancelledEvent), $0.optimisticallyPreLayoutWorkspaces)
         } ?? (cancelledEvent, false)
