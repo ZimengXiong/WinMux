@@ -3,6 +3,7 @@ import Common
 
 @MainActor private var moveWithMouseSessionWindowIdsInFlight: Set<UInt32> = []
 @MainActor private var moveWithMouseTrailingRerunWindowIds: Set<UInt32> = []
+@MainActor private var floatingWindowDragRebindTask: Task<Void, Never>? = nil
 
 func movedObs(_: AXObserver, ax: AXUIElement, notif: CFString, _: UnsafeMutableRawPointer?) {
     let windowId = ax.containingWindowId()
@@ -125,10 +126,21 @@ func moveFloatingWindowWithMouse(_ window: Window) {
             startedInSidebar: false,
         )
     }
-    let targetWorkspace = MousePointerTracker.shared.currentSample.point.monitorApproximation.activeWorkspace
-    guard let parent = window.parent else { return }
-    if targetWorkspace != parent {
-        window.bindAsFloatingWindow(to: targetWorkspace)
+    // Rebind by the window's center, as upstream does: layoutFloatingWindow decides by the center
+    // too, so binding by the pointer while the center is still on the other monitor made the next
+    // layout pass (at the latest the mouse-up refresh) teleport the window across monitors.
+    // Called per display frame, so keep at most one AX lookup in flight.
+    guard floatingWindowDragRebindTask == nil else { return }
+    floatingWindowDragRebindTask = Task { @MainActor in
+        defer { floatingWindowDragRebindTask = nil }
+        guard let center = try? await window.getCenter(),
+              let parent = window.parent,
+              parent is Workspace
+        else { return }
+        let targetWorkspace = center.monitorApproximation.activeWorkspace
+        if targetWorkspace != parent {
+            window.bindAsFloatingWindow(to: targetWorkspace)
+        }
     }
 }
 
