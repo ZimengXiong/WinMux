@@ -5,9 +5,15 @@ struct WorkspaceSidebarClockComponents {
     let minute: String
     let second: String
 
-    init(date: Date, calendar: Calendar = .autoupdatingCurrent) {
+    init(date: Date, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent) {
         let components = calendar.dateComponents([.hour, .minute, .second], from: date)
-        hour = Self.format(components.hour)
+        // Take the hour from the same format the expanded clock card shows, so both use one hour cycle.
+        let hourAndMinute = date.formatted(
+            Date.FormatStyle(locale: locale, calendar: calendar, timeZone: calendar.timeZone)
+                .hour(.twoDigits(amPM: .omitted)).minute(.twoDigits),
+        )
+        let localizedHour = String(hourAndMinute.prefix(while: \.isNumber))
+        hour = localizedHour.isEmpty ? Self.format(components.hour) : localizedHour
         minute = Self.format(components.minute)
         second = Self.format(components.second)
     }

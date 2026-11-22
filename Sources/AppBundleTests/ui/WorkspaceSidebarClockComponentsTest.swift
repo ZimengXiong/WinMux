@@ -13,6 +13,24 @@ final class WorkspaceSidebarClockComponentsTest: XCTestCase {
         calendar.date(from: DateComponents(year: 2030, month: 1, day: 31, hour: 12, minute: 34, second: 56))!
     }
 
+    func testCompactClockHourFollowsLocaleHourCycle() {
+        let afternoon = calendar.date(from: DateComponents(year: 2030, month: 1, day: 31, hour: 21, minute: 24, second: 44))!
+        let us = WorkspaceSidebarClockComponents(date: afternoon, locale: Locale(identifier: "en_US"), calendar: calendar)
+        let de = WorkspaceSidebarClockComponents(date: afternoon, locale: Locale(identifier: "de_DE"), calendar: calendar)
+
+        let usNoon = WorkspaceSidebarClockComponents(
+            date: calendar.date(from: DateComponents(year: 2030, month: 1, day: 31, hour: 12, minute: 0))!,
+            locale: Locale(identifier: "en_US"),
+            calendar: calendar,
+        )
+
+        XCTAssertEqual(us.hour, "09")
+        XCTAssertEqual(usNoon.hour, "12")
+        XCTAssertEqual(de.hour, "21")
+        XCTAssertEqual(us.minute, "24")
+        XCTAssertEqual(us.second, "44")
+    }
+
     func testExpandedClockUsesSeparateFullEnglishWeekdayAndMonthDayLines() {
         let lines = WorkspaceSidebarExpandedClockDateLines(
             date: thursdayJanuary31,

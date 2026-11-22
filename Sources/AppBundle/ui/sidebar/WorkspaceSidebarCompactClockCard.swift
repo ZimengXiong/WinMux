@@ -5,9 +5,11 @@ struct WorkspaceSidebarCompactClockCard: View {
     let date: Date
     let sectionWidth: CGFloat
     let showsSeconds: Bool
+    @Environment(\.locale) private var locale
+    @Environment(\.calendar) private var calendar
 
     private var components: WorkspaceSidebarClockComponents {
-        WorkspaceSidebarClockComponents(date: date)
+        WorkspaceSidebarClockComponents(date: date, locale: locale, calendar: calendar)
     }
 
     var body: some View {
