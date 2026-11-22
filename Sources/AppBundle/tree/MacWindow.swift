@@ -29,14 +29,18 @@ final class MacWindow: Window {
             return existing
         }
         let rect = try await macApp.getAxRect(windowId)
+        let returnWorkspace = isStartup ? nil : newWindowReturnWorkspace(appPid: macApp.pid)
         let data = try await unbindAndGetBindingDataForNewWindow(
             windowId,
             macApp,
             isStartup
                 ? (rect?.center.monitorApproximation ?? mainMonitor).activeWorkspace
-                : focus.workspace,
+                : returnWorkspace ?? focus.workspace,
             window: nil,
         )
+        if returnWorkspace != nil, data.parent.nodeWorkspace == returnWorkspace {
+            consumeNewWindowReturnWorkspace() // popups don't take the slot
+        }
 
         // atomic synchronous section
         if let existing = allWindowsMap[windowId] { return existing }

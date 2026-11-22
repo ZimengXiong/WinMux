@@ -14,6 +14,7 @@ import Foundation
 func resetFocusCacheForTests() {
     lastKnownNativeFocusedWindowId = nil
     workspaceProjectFocusHold = nil
+    resetNewWindowReturnTargetForTests()
 }
 
 @MainActor
@@ -66,7 +67,10 @@ private func shouldIgnoreNativeFocusDuringProjectHold(_ nativeFocused: Window?) 
         return
     }
     if nativeFocused?.windowId != lastKnownNativeFocusedWindowId {
-        _ = nativeFocused?.focusWindow()
+        let focusBefore = focus
+        if nativeFocused?.focusWindow() == true, let nativeFocused {
+            recordNativeActivationFocusJump(from: focusBefore, to: nativeFocused)
+        }
         lastKnownNativeFocusedWindowId = nativeFocused?.windowId
     }
     (nativeFocused?.app as? MacApp)?.lastNativeFocusedWindowId = nativeFocused?.windowId
