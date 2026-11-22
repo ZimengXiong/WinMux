@@ -85,6 +85,15 @@ private func handleMovedEvent(windowId: UInt32?, notif: String) async {
 @MainActor
 private func moveWithMouse(_ window: Window) async throws { // todo cover with tests
     syncClosedWindowsCacheToCurrentWorld()
+    // handleMovedEvent checked for a running resize before suspending on AX (isManipulatedWithMouse,
+    // then runLightSession's focused-window query). A left/top-edge resize emits kAXMoved and
+    // kAXResized together, so resizedObs may have started the resize session meanwhile; going on
+    // would flip it into a move (resize preview lost, the release applies a swap/split instead).
+    if getCurrentMouseManipulationKind() == .resize,
+       WindowMouseInteractionDriver.shared.resizeSession?.windowId == window.windowId
+    {
+        return
+    }
     guard let parent = window.parent else { return }
     switch parent.cases {
         case .workspace:
