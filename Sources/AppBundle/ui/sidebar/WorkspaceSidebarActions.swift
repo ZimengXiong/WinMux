@@ -54,7 +54,9 @@ func focusWorkspaceFromSidebar(_ workspace: Workspace, targetMonitorScopeId: Str
         return workspace.focusWorkspace()
     }
 
-    guard targetMonitor.setActiveWorkspace(workspace) else { return false }
+    // Selecting the remaining display during a disconnect is a fallback, not a new preference.
+    let rememberMonitor = workspace.workspaceMonitor.rect.topLeftCorner != targetMonitor.rect.topLeftCorner
+    guard targetMonitor.setActiveWorkspace(workspace, rememberMonitor: rememberMonitor) else { return false }
     return workspace.focusWorkspace()
 }
 

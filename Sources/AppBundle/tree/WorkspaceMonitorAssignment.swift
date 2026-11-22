@@ -12,13 +12,14 @@ extension Monitor {
     }
 
     @MainActor
-    func setActiveWorkspace(_ workspace: Workspace) -> Bool {
-        rect.topLeftCorner.setActiveWorkspace(workspace)
+    func setActiveWorkspace(_ workspace: Workspace, rememberMonitor: Bool = false) -> Bool {
+        rect.topLeftCorner.setActiveWorkspace(workspace, rememberMonitor: rememberMonitor)
     }
 }
 
 @MainActor
-func activateWorkspaceOnMonitorPreservingSourceViewport(_ workspace: Workspace, targetMonitor: Monitor) -> Bool {
+func activateWorkspaceOnMonitorPreservingSourceViewport(_ workspace: Workspace, targetMonitor: Monitor, rememberMonitor: Bool = false) -> Bool {
+    guard isValidAssignment(workspace: workspace, screen: targetMonitor.rect.topLeftCorner) else { return false }
     let sourceMonitor = workspace.isVisible ? workspace.workspaceMonitor : nil
     let sourceProjectId = workspace.projectId
     if let sourceMonitor,
@@ -34,7 +35,7 @@ func activateWorkspaceOnMonitorPreservingSourceViewport(_ workspace: Workspace, 
             "Generated incompatible fallback workspace (\(fallbackWorkspace)) for the monitor (\(sourceMonitor))",
         )
     }
-    guard targetMonitor.setActiveWorkspace(workspace) else { return false }
+    guard targetMonitor.setActiveWorkspace(workspace, rememberMonitor: rememberMonitor) else { return false }
     return true
 }
 
@@ -44,7 +45,7 @@ func overrideWorkspaceOnMonitorBySwappingActiveViewports(_ workspace: Workspace,
         return false
     }
     guard workspace.isVisible else {
-        return targetMonitor.setActiveWorkspace(workspace)
+        return targetMonitor.setActiveWorkspace(workspace, rememberMonitor: true)
     }
 
     let sourceMonitor = workspace.workspaceMonitor
@@ -58,12 +59,12 @@ func overrideWorkspaceOnMonitorBySwappingActiveViewports(_ workspace: Workspace,
         targetMonitor: targetMonitor,
     )
     if let sourceReplacement {
-        _ = winMuxWorkspaceState.setActiveWorkspace(sourceReplacement, on: MonitorViewportId(sourceMonitor))
+        _ = winMuxWorkspaceState.setActiveWorkspace(sourceReplacement, on: MonitorViewportId(sourceMonitor), rememberMonitor: true)
     } else {
         let fallback = createBlankWorkspace(projectId: workspace.projectId, monitor: sourceMonitor)
         _ = winMuxWorkspaceState.setActiveWorkspace(fallback, on: MonitorViewportId(sourceMonitor))
     }
-    _ = winMuxWorkspaceState.setActiveWorkspace(workspace, on: MonitorViewportId(targetMonitor))
+    _ = winMuxWorkspaceState.setActiveWorkspace(workspace, on: MonitorViewportId(targetMonitor), rememberMonitor: true)
     checkWorkspaceHierarchyInvariants()
     return true
 }
@@ -98,7 +99,7 @@ func gcMonitors() {
 
 extension CGPoint {
     @MainActor
-    func setActiveWorkspace(_ workspace: Workspace) -> Bool {
+    func setActiveWorkspace(_ workspace: Workspace, rememberMonitor: Bool = false) -> Bool {
         if !isValidAssignment(workspace: workspace, screen: self) {
             return false
         }
@@ -106,7 +107,7 @@ extension CGPoint {
         guard !winMuxWorkspaceState.isWorkspaceActive(workspace.id, outside: viewportId) else {
             return false
         }
-        _ = winMuxWorkspaceState.setActiveWorkspace(workspace, on: viewportId)
+        _ = winMuxWorkspaceState.setActiveWorkspace(workspace, on: viewportId, rememberMonitor: rememberMonitor)
         checkWorkspaceHierarchyInvariants()
         return true
     }
