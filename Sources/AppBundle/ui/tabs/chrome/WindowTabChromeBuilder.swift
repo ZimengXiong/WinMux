@@ -3,11 +3,10 @@ import CoreGraphics
 @MainActor
 func buildWindowTabChromeItemsFromSource10Tree() async -> [WindowTabChromeItem] {
     guard TrayMenuModel.shared.isEnabled, config.windowTabs.enabled else { return [] }
-    guard !shouldSuppressChromeForNativeFullscreenContent else { return [] }
     pruneCachedWindowTitles()
 
     var items: [WindowTabChromeItem] = []
-    for workspace in Workspace.all where workspace.isVisible {
+    for workspace in Workspace.all where workspace.isVisible && !shouldSuppressChromeForFullscreenContent(on: workspace.workspaceMonitor) {
         for container in workspace.rootTilingContainer.allTabbedContainersRecursive {
             if let item = await makeWindowTabChromeItem(container: container, workspace: workspace) {
                 items.append(item)

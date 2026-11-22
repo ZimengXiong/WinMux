@@ -53,6 +53,7 @@ func setUpWorkspacesForTests() {
 
     resetFocusCacheForTests()
     shouldSuppressChromeForNativeFullscreenContent = false
+    nativeFullscreenSuppressedMonitorIds = []
     setScheduledRefreshOverrideForTests(nil)
     setBlockingRefreshOverridesForTests()
     cancelManipulatedWithMouseState()
