@@ -25,7 +25,13 @@ func focusAfterWindowClosure(
     // window, so `focus` has fallen back to something else and never equals the closing window.
     // The refresh session's snapshot can -- it is taken at the start of the session, before
     // macOS' own post-close focus reshuffle is read into the model.
-    guard focusedWindowIdBeforeClosure == closingWindow.windowId else {
+    let wasRecentlyFocusedBeforeCrossWorkspaceShift =
+        deadWindowWorkspace != nil &&
+        deadWindowWorkspace != currentFocus.workspace &&
+        deadWindowWorkspace == previousFocusedWorkspace &&
+        previousFocusedWorkspaceDate.distance(to: now) < 1 &&
+        (refreshSnapshotPreviousFocus?.windowOrNil == closingWindow || previousFocus?.windowOrNil == closingWindow)
+    guard focusedWindowIdBeforeClosure == closingWindow.windowId || wasRecentlyFocusedBeforeCrossWorkspaceShift else {
         debugFocusLog(
             "focusAfterWindowClosure closing=\(closingWindow.windowId) skippedNotFocused focusedBefore=\(focusedWindowIdBeforeClosure?.description ?? "nil") currentFocus=\(debugDescribe(currentFocus))"
         )
