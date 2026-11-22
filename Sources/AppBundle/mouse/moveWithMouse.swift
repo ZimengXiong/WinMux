@@ -15,12 +15,10 @@ func movedObs(_: AXObserver, ax: AXUIElement, notif: CFString, _: UnsafeMutableR
 @MainActor
 private func handleMovedEvent(windowId: UInt32?, notif: String) async {
     if shouldIgnoreMovedObsForCurrentDragSession(windowId: windowId) ||
-        WindowMouseInteractionOpacityController.shared.shouldSuppressObserverEvent(windowId: windowId) ||
-        shouldIgnoreAxObserverEventForPostDragSuppression(windowId: windowId, notif: notif)
+        WindowMouseInteractionOpacityController.shared.shouldSuppressObserverEvent(windowId: windowId)
     {
-        // Suppressed events are our own parking/restore/post-drag moves: their authors write
-        // the resulting rect into the cache themselves, so invalidating here would wipe
-        // deliberately recorded values.
+        // Suppressed events are our own parking/restore moves: the parked window's cache
+        // deliberately holds its logical (pre-park) rect, so invalidating here would wipe it.
         return
     }
     // The cached native state (rect, fullscreen) is stale the moment the window reports
@@ -29,6 +27,13 @@ private func handleMovedEvent(windowId: UInt32?, notif: String) async {
     // refresh barrier.
     if let windowId {
         Window.get(byId: windowId)?.invalidateLastKnownNativeState()
+    }
+    // Post-drag suppression only skips the refresh / drag start. The drop's relayout (swap,
+    // split, new resize weights) moves windows via setAxFrame without recording their rects,
+    // so the cache must still be invalidated above or it keeps the pre-drop rect indefinitely
+    // and the next drag previews / hit-tests against stale geometry.
+    if shouldIgnoreAxObserverEventForPostDragSuppression(windowId: windowId, notif: notif) {
+        return
     }
     guard let token: RunSessionGuard = .isServerEnabled else { return }
     guard let windowId, let window = Window.get(byId: windowId) else {

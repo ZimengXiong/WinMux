@@ -8,13 +8,14 @@ func resizedObs(_: AXObserver, ax: AXUIElement, notif: CFString, _: UnsafeMutabl
         if WindowMouseInteractionOpacityController.shared.shouldSuppressObserverEvent(windowId: windowId) {
             return
         }
-        if shouldIgnoreAxObserverEventForPostDragSuppression(windowId: windowId, notif: notif) {
-            return
-        }
         // See movedObs: geometry events invalidate the cached native state (consumers re-fetch
-        // on demand), but suppressed events are our own moves whose authors maintain the cache.
+        // on demand); only parked windows (above) keep their deliberately recorded logical rect.
+        // Post-drag suppression still invalidates: the drop's relayout doesn't record rects.
         if let windowId {
             Window.get(byId: windowId)?.invalidateLastKnownNativeState()
+        }
+        if shouldIgnoreAxObserverEventForPostDragSuppression(windowId: windowId, notif: notif) {
+            return
         }
         guard RunSessionGuard.isServerEnabled != nil else { return }
         guard let windowId, let window = Window.get(byId: windowId) else {
