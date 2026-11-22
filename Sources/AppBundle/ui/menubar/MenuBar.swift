@@ -10,7 +10,10 @@ private let winmuxNewIssueURL = "https://github.com/zimengxiong/winmux/issues/ne
         viewModel: TrayMenuModel,
         checkForUpdates: (() -> Void)? = nil,
     ) -> some Scene { // todo should it be converted to "SwiftUI struct"?
-        MenuBarExtra {
+        MenuBarExtra(isInserted: Binding(
+            get: { viewModel.isMenuBarIconVisible },
+            set: { _ = viewModel.setIfChanged(\.isMenuBarIconVisible, $0) },
+        )) {
             let shortIdentification = "\(winMuxAppName) v\(winMuxAppVersion) \(gitShortHash)"
             let identification      = "\(winMuxAppName) v\(winMuxAppVersion) \(gitHash)"
         Text(shortIdentification)
