@@ -251,7 +251,7 @@ private func parseShortcutsPreset(_ raw: TOMLValueConvertible, _ backtrace: Toml
     parseString(raw, backtrace)
         .flatMap { rawValue in
             ShortcutsPreset(rawValue: rawValue)
-                .orFailure(.semantic(backtrace, "Can't parse shortcuts preset '\(rawValue)'. Possible values: (none|rectangle)"))
+                .orFailure(.semantic(backtrace, "Can't parse shortcuts preset '\(rawValue)'. Possible values: (none)"))
         }
 }
 

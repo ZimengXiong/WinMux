@@ -57,7 +57,6 @@ struct ShortcutBehaviorSettingsView: View {
                 } onChange: { persistRootString("default-root-container-orientation", defaultOrientation.rawValue) }
                 SettingsPicker("Shortcut preset", selection: $shortcutsPreset, help: "Install the built-in default shortcut set, or use your own.") {
                     Text("Custom").tag("none")
-                    Text("Rectangle").tag("rectangle")
                 } onChange: { persistRootString("shortcuts-preset", shortcutsPreset) }
             }
             SettingsSection("Workspaces") {
