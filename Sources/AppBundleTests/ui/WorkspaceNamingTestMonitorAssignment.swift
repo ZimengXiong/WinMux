@@ -4,6 +4,78 @@ import Common
 import XCTest
 
 extension WorkspaceNamingTest {
+    func testWorkspaceShownOnExternalMonitorReturnsThereAfterAnotherWorkspaceMovesAway() {
+        let builtIn = WorkspaceNamingTestMonitor(
+            monitorAppKitNsScreenScreensId: 1,
+            name: "Built-in",
+            rect: Rect(topLeftX: 0, topLeftY: 0, width: 1920, height: 1080),
+            visibleRect: Rect(topLeftX: 0, topLeftY: 0, width: 1920, height: 1080),
+            isMain: true,
+        )
+        let external = WorkspaceNamingTestMonitor(
+            monitorAppKitNsScreenScreensId: 2,
+            name: "External",
+            rect: Rect(topLeftX: 1920, topLeftY: 0, width: 1920, height: 1080),
+            visibleRect: Rect(topLeftX: 1920, topLeftY: 0, width: 1920, height: 1080),
+            isMain: false,
+        )
+        setMonitorsForTests([builtIn, external])
+
+        let workspace3 = Workspace.get(byName: "3")
+        workspace3.seedMonitorIfNeeded(builtIn)
+        XCTAssertTrue(focusWorkspaceFromSidebar(workspace3, targetMonitorScopeId: workspaceSidebarMonitorScopeId(for: external)))
+
+        let workspace2 = Workspace.get(byName: "2")
+        workspace2.seedMonitorIfNeeded(external)
+        _ = winMuxWorkspaceState.setActiveWorkspace(workspace2, on: MonitorViewportId(external))
+
+        let fallback = Workspace.get(byName: "fallback")
+        fallback.seedMonitorIfNeeded(external)
+        _ = winMuxWorkspaceState.setActiveWorkspace(fallback, on: MonitorViewportId(external))
+        _ = winMuxWorkspaceState.setActiveWorkspace(workspace2, on: MonitorViewportId(builtIn))
+
+        XCTAssertTrue(workspace3.focusWorkspace())
+        XCTAssertTrue(external.activeWorkspace === workspace3)
+        XCTAssertTrue(builtIn.activeWorkspace === workspace2)
+    }
+
+    func testMovedWorkspaceStaysOnTargetMonitorAfterItIsHidden() async throws {
+        let main = WorkspaceNamingTestMonitor(
+            monitorAppKitNsScreenScreensId: 1,
+            name: "Left",
+            rect: Rect(topLeftX: 0, topLeftY: 0, width: 1920, height: 1080),
+            visibleRect: Rect(topLeftX: 0, topLeftY: 0, width: 1920, height: 1080),
+            isMain: true,
+        )
+        let secondary = WorkspaceNamingTestMonitor(
+            monitorAppKitNsScreenScreensId: 2,
+            name: "Right",
+            rect: Rect(topLeftX: 1920, topLeftY: 0, width: 1920, height: 1080),
+            visibleRect: Rect(topLeftX: 1920, topLeftY: 0, width: 1920, height: 1080),
+            isMain: false,
+        )
+        setMonitorsForTests([main, secondary])
+        let moved = Workspace.get(byName: "moved")
+        moved.seedMonitorIfNeeded(main)
+        _ = TestWindow.new(id: 501, parent: moved.rootTilingContainer)
+        XCTAssertTrue(main.setActiveWorkspace(moved))
+        XCTAssertTrue(moved.focusWorkspace())
+
+        var args = MoveWorkspaceToMonitorCmdArgs(rawArgs: [])
+        args.target = .initialized(.relative(.next))
+        let result = try await MoveWorkspaceToMonitorCommand(args: args).run(.defaultEnv, .emptyStdin)
+        assertEquals(result.exitCode, 0)
+        XCTAssertTrue(secondary.activeWorkspace === moved)
+
+        let other = Workspace.get(byName: "other")
+        other.seedMonitorIfNeeded(secondary)
+        _ = TestWindow.new(id: 502, parent: other.rootTilingContainer)
+        XCTAssertTrue(secondary.setActiveWorkspace(other))
+        XCTAssertEqual(moved.workspaceMonitor.rect.topLeftCorner, secondary.rect.topLeftCorner)
+        XCTAssertTrue(moved.focusWorkspace())
+        XCTAssertTrue(secondary.activeWorkspace === moved)
+    }
+
     func testMovingWorkspaceToAnotherMonitorKeepsSourceMonitorInSameProject() async throws {
         let main = WorkspaceNamingTestMonitor(
             monitorAppKitNsScreenScreensId: 1,

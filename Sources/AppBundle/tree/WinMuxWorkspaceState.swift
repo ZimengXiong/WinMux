@@ -157,7 +157,7 @@ struct WinMuxWorkspaceState {
         }
     }
 
-    mutating func setActiveWorkspace(_ workspace: Workspace, on viewportId: MonitorViewportId) -> Bool {
+    mutating func setActiveWorkspace(_ workspace: Workspace, on viewportId: MonitorViewportId, rememberMonitor: Bool = false) -> Bool {
         ensureMonitorViewportExists(viewportId)
         ensureProjectExists(workspace.projectId)
 
@@ -168,6 +168,9 @@ struct WinMuxWorkspaceState {
         viewport.activeWorkspaceId = workspace.id
         viewport.lastActiveWorkspaceByProject[workspace.projectId] = workspace.id
         monitorViewportsById[viewportId] = viewport
+        if rememberMonitor || workspace.preferredMonitorPoint == nil {
+            workspace.preferredMonitorPoint = viewportId.topLeftCorner
+        }
         return true
     }
 
