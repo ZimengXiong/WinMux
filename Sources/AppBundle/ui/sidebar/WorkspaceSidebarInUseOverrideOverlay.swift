@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WorkspaceSidebarInUseOverrideOverlay: View {
     let text: String
+    var isCompact = false
     let onOverride: () -> Void
     @State private var isOverrideHovered = false
 
@@ -21,21 +22,31 @@ struct WorkspaceSidebarInUseOverrideOverlay: View {
             shape.strokeBorder(Color(nsColor: .systemRed).opacity(0.45), lineWidth: 0.8)
 
             VStack(spacing: 8) {
-                Text(text)
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundStyle(Color.white.opacity(0.88))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 12)
+                // The compact rail is too narrow for the label; it moves into the tooltip.
+                if !isCompact {
+                    Text(text)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.88))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 12)
+                }
 
                 Button(action: onOverride) {
-                    Text("Override")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Color.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 4)
+                    Group {
+                        if isCompact {
+                            Image(systemName: "arrow.left.arrow.right")
+                        } else {
+                            Text("Override")
+                        }
+                    }
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, isCompact ? 6 : 14)
+                    .padding(.vertical, 4)
                 }
                 .buttonStyle(.plain)
+                .help(isCompact ? "\(text). Override" : "")
                 .background {
                     RoundedRectangle(cornerRadius: 5, style: .continuous)
                         .fill(Color(nsColor: .systemRed).opacity(isOverrideHovered ? 1 : 0.88))
