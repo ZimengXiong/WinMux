@@ -38,8 +38,11 @@ func clearSidebarDraftWorkspaceLabelIfNeeded(_ workspaceName: String) {
 
 @MainActor
 func clearOrphanedWorkspaceSidebarLabels() {
+    // Persistent workspaces may not have been created yet, but they are not orphans:
+    // their configured labels must survive until the workspace first appears.
     for workspaceName in config.workspaceSidebar.workspaceLabels.keys
     where winMuxWorkspaceState.workspace(named: workspaceName) == nil
+        && !config.persistentWorkspaces.contains(workspaceName)
     {
         clearWorkspaceSidebarLabelIfNeeded(workspaceName)
     }
