@@ -97,7 +97,9 @@ func closestWorkspaceForDeletion(
         orderedWorkspaces(in: projectId),
         focusedWorkspace: focus.workspace,
     )
-        .filter { isValidAssignment(workspace: $0, screen: monitor.rect.topLeftCorner) }
+        // Project scope spans monitors: a workspace already shown on another display can't become
+        // this display's fallback (setActiveWorkspace refuses a workspace active elsewhere).
+        .filter { $0 === workspace || workspaceIsAvailableForMonitor($0, monitor: monitor) }
     let automaticCandidates = scopedCandidates.filter(\.usesAutomaticDisplayName)
     let candidates = workspace.usesAutomaticDisplayName && automaticCandidates.contains(workspace)
         ? automaticCandidates

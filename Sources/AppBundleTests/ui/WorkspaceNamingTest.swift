@@ -369,6 +369,41 @@ final class WorkspaceNamingTest: XCTestCase {
         XCTAssertTrue(Workspace.existing(byName: "3") === next)
     }
 
+    // Regression for GitHub #45: deleting the last workspace visible on one display must not pick a
+    // fallback that is already active on another display (setActiveWorkspace refuses it -> crash).
+    func testDeletingVisibleWorkspaceSkipsFallbackActiveOnOtherMonitor() throws {
+        let main = TestMonitor(
+            monitorAppKitNsScreenScreensId: 1,
+            name: "Main",
+            rect: Rect(topLeftX: 0, topLeftY: 0, width: 1920, height: 1080),
+            visibleRect: Rect(topLeftX: 0, topLeftY: 0, width: 1920, height: 1080),
+            isMain: true,
+        )
+        let secondary = TestMonitor(
+            monitorAppKitNsScreenScreensId: 2,
+            name: "Secondary",
+            rect: Rect(topLeftX: 1920, topLeftY: 0, width: 1920, height: 1080),
+            visibleRect: Rect(topLeftX: 1920, topLeftY: 0, width: 1920, height: 1080),
+            isMain: false,
+        )
+        setMonitorsForTests([main, secondary])
+        let other = Workspace.get(byName: "2")
+        other.markAsAutomaticallyNamed()
+        other.seedMonitorIfNeeded(secondary)
+        _ = TestWindow.new(id: 120, parent: other.rootTilingContainer)
+        XCTAssertTrue(secondary.setActiveWorkspace(other))
+        let deleted = Workspace.get(byName: "3")
+        deleted.markAsAutomaticallyNamed()
+        deleted.seedMonitorIfNeeded(main)
+        XCTAssertTrue(main.setActiveWorkspace(deleted))
+
+        try deleteWorkspaceForSidebar(workspaceName: deleted.name)
+
+        XCTAssertNil(Workspace.existing(byName: "3"))
+        XCTAssertTrue(secondary.activeWorkspace === other)
+        XCTAssertFalse(main.activeWorkspace === other)
+    }
+
     func testDeletingLastFocusedWorkspaceFocusesPreviousClosestWorkspace() throws {
         let previous = Workspace.get(byName: "1")
         previous.markAsAutomaticallyNamed()
